@@ -1,0 +1,5 @@
+pyspark
+pandas
+minio
+apache-airflow>=2.9.2
+boto>=1.34.136
