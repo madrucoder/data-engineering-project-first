@@ -21,9 +21,60 @@ services:
       - MINIO_SECRET_KEY: $(MINIO_SECRET_KEY)
     ports:
       - "9000:9000"
-    command: server/data
+      - "9001:9001"
+    command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+
+  minio_mc:
+    image: minio/mc
+    container_name: minio_mc
+    depends_on:
+    - minio
+    entrypoint: /bin/sh -c
+    command: |
+      "while ! curl -s http://minio:9000;
+      do sleep 10;
+      done;
+      mc alias set myminio http://minio:9000 $(MINIO_ACCESS_KEY) $(MINIO_SECRET_KEY);
+      mc mb myminio/landing
+      "
+  
+  postgres-airflow:
+    image: postgres:15
+    container_name: postgres-airflow
+    environment:
+      - POSTGRES_USER: $(POSTGRES_AF_USER)
+      - POSTGRES_PASSWORD: $(POSTGRES_AF_PASSWORD)
+      - POSTGRES_DB: $(POSTGRES_AF_DB)
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgressql/data
+
+  
+  airflow:
+    build:
+      context: .
+      dockerfile: config_airflow/airflow.Dockerfile
+    container_name: airflow
+    environment:
+      - AIRFLOW_CORE_SQL_ALCHEMY_CONN: postgresql+psycopg2://$(POSTGRES_AF_USER):$(POSTGRES_AF_PASSWORD)@postgres-airflow:5432/$(POSTGRES_AF_DB)
+      - AIRFLOW_CORE_LOAD_EX: 'False'
+      - AIRFLOW_CORE_DAGS_ARE_PAUSED_AT_CREATION: 'True'
+      - AIRFLOW_CORE_LOGGING_LEVEL: INFO
+      - MINIO_ENDPOINT: http://minio:9000
+      - MINIO_ACCESS_KEY: $(MINIO_ACCESS_KEY)
+      - MINIO_SECRET_KEY: $(MINIO_SECRET_KEY)
+    depends_on:
+      - postgres-airflow
+      - minio
+    ports:
+      - "8081:8080"
+    volumes:
+      - .dags:/usr/local/airflow/dags
+    command: ["airflow", "standalone"]
+
 
   spark:
     image: bitnami/spark:latest
@@ -35,16 +86,7 @@ services:
     volumes:
       - ./spark_connector:/spark_connector
 
-  airflow:
-    image: puckel/docker-airflow:latest
-    container_name: airflow
-    environment:
-      - LOAD_EX: "n"
-      - EXECUTOR: "local"
-    ports:
-      - "8081:8080"
-    volumes:
-      - .dags:/usr/local/airflow/dags
+  
 
 volumes:
   postgres_data:
