@@ -1,31 +1,20 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  postgres:
-    image: postgres:latest
-    container_name: postgres
-    environment:
-      - POSTGRES_USER: $(POSTGRES_USER)
-      - POSTGRES_PASSWORD: $(POSTGRES_PASSWORD)
-      - POSTGRES_DB: $(POSTGRES_DB)
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-  
+
   minio:
     image: minio/minio
     container_name: minio
     environment:
-      - MINIO_ACCESS_KEY: $(MINIO_ACCESS_KEY)
-      - MINIO_SECRET_KEY: $(MINIO_SECRET_KEY)
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minio@1234!
     ports:
       - "9000:9000"
       - "9001:9001"
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
-
+    
   minio_mc:
     image: minio/mc
     container_name: minio_mc
@@ -36,17 +25,18 @@ services:
       "while ! curl -s http://minio:9000;
       do sleep 10;
       done;
-      mc alias set myminio http://minio:9000 $(MINIO_ACCESS_KEY) $(MINIO_SECRET_KEY);
+      mc alias set myminio http://minio:9000 minioadmin minio@1234!;
       mc mb myminio/landing
       "
+ 
   
   postgres-airflow:
     image: postgres:15
     container_name: postgres-airflow
     environment:
-      - POSTGRES_USER: $(POSTGRES_AF_USER)
-      - POSTGRES_PASSWORD: $(POSTGRES_AF_PASSWORD)
-      - POSTGRES_DB: $(POSTGRES_AF_DB)
+      POSTGRES_USER: post_airflow
+      POSTGRES_PASSWORD: airflow_123
+      POSTGRES_DB: airflow
     ports:
       - "5432:5432"
     volumes:
@@ -59,13 +49,13 @@ services:
       dockerfile: config_airflow/airflow.Dockerfile
     container_name: airflow
     environment:
-      - AIRFLOW_CORE_SQL_ALCHEMY_CONN: postgresql+psycopg2://$(POSTGRES_AF_USER):$(POSTGRES_AF_PASSWORD)@postgres-airflow:5432/$(POSTGRES_AF_DB)
-      - AIRFLOW_CORE_LOAD_EX: 'False'
-      - AIRFLOW_CORE_DAGS_ARE_PAUSED_AT_CREATION: 'True'
-      - AIRFLOW_CORE_LOGGING_LEVEL: INFO
-      - MINIO_ENDPOINT: http://minio:9000
-      - MINIO_ACCESS_KEY: $(MINIO_ACCESS_KEY)
-      - MINIO_SECRET_KEY: $(MINIO_SECRET_KEY)
+      AIRFLOW_CORE_SQL_ALCHEMY_CONN: postgresql+psycopg2://post_airflow:airflow_123@postgres-airflow:5432/airflow
+      AIRFLOW_CORE_LOAD_EX: 'False'
+      AIRFLOW_CORE_DAGS_ARE_PAUSED_AT_CREATION: 'True'
+      AIRFLOW_CORE_LOGGING_LEVEL: INFO
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minio@1234!
     depends_on:
       - postgres-airflow
       - minio
@@ -75,12 +65,23 @@ services:
       - ./airflow/dags:/usr/local/airflow/dags
     command: ["airflow", "standalone"]
 
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: db_dados
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   spark:
-    image: bitnami/spark:latest
+    image: bitnami/spark:3.3.20-debian-11-r16
     container_name: spark
     environment:
-      SPARK_MODE: master
+      - SPARK_MODE=master
     ports:
       - "8080:8080"
     volumes:
