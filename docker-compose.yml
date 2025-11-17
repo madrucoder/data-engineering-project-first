@@ -29,7 +29,6 @@ services:
       mc mb myminio/landing
       "
  
-  
   postgres-airflow:
     image: postgres:15
     container_name: postgres-airflow
@@ -46,7 +45,7 @@ services:
   airflow:
     build:
       context: .
-      dockerfile: config_airflow/airflow.Dockerfile
+      dockerfile: airflow/config_airflow/airflow.Dockerfile
     container_name: airflow
     environment:
       AIRFLOW_CORE_SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AF_USER}:${POSTGRES_AF_PASSWORD}@postgres-airflow:5432/airflow
@@ -60,11 +59,12 @@ services:
       - postgres-airflow
       - minio
     ports:
-      - "8081:8080"
+      - "8080:8080"
     volumes:
       - ./airflow/dags:/usr/local/airflow/dags
+      - ./airflow/config_airflow:/opt/airflow/config_airflow
     command: ["airflow", "standalone"]
-      
+
 
 volumes:
   postgres_data:
