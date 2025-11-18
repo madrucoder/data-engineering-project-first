@@ -39,7 +39,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgressql/data
+      - postgres_data:/var/lib/postgresql/data
 
   
   airflow:
@@ -61,7 +61,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./airflow/dags:/usr/local/airflow/dags
+      - ./airflow/dags:/opt/airflow/dags
       - ./airflow/config_airflow:/opt/airflow/config_airflow
     command: ["airflow", "standalone"]
 

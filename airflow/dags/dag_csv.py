@@ -1,19 +1,18 @@
 # SALVANDO EM CSV
 
 from datetime import datetime, timedelta
-
 from airflow.decorators import dag, task
-from airflow.providers.postgres.hook.postgres import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 import boto3
 import pandas as pd
 
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'star_date': datetime(2025, 1, 1),
+    'start_date': datetime(2025, 1, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
+    'retries': 0,
     'retry_delay': timedelta(minutes=1),
 }
 
@@ -28,6 +27,7 @@ default_args = {
 def postgres_to_minio_etl():
     table_names = ['veiculos', 'estados', 'cidades', 'concessionarias', 'vendedores', 'clientes', 'venda' ]
 
+    # Conectar ao cliente S3
     s3_client = boto3.client(
         's3',
         endpoint_url='http://minio:9000',
@@ -69,4 +69,4 @@ def postgres_to_minio_etl():
         max_id = get_max_primary_key(table_name)
         load_incremental_data(table_name, max_id)
 
-postgres_to_minio_etl = postgres_to_minio_etl()
+postgres_to_minio_etl_dag = postgres_to_minio_etl()
