@@ -5,6 +5,7 @@ from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 import boto3
 import pandas as pd
+import os
 
 default_args = {
     'owner': 'airflow',
@@ -31,8 +32,8 @@ def postgres_to_minio_etl():
     s3_client = boto3.client(
         's3',
         endpoint_url='http://minio:9000',
-        aws_access_key_id='${MINIO_SECRET_KEY_ID}',
-        aws_secret_access_key='${MINIO_SECRET_KEY}'
+        aws_access_key_id=os.environ['MINIO_ACCESS_KEY'],
+        aws_secret_access_key=os.environ['MINIO_SECRET_KEY']
     )
     bucket_name = 'landing'
 
